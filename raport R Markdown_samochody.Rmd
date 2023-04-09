@@ -1,0 +1,225 @@
+
+
+#Pobierz i zapisz do csv dane porcjami z bazy danych
+
+
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(DBI)
+library(RMySQL)
+library(stringr)
+library(tidyverse)
+library(magrittr)
+
+```
+
+```{r}
+myHost <- '54.37.136.190'; 
+myUsername = 'student'; 
+myDbname = 'auta2'; 
+myPort = 3306; 
+myPassword = '.studenT800.'; 
+conM = dbConnect(MySQL(), user= myUsername, host= myHost,
+                 password= myPassword, dbname= myDbname, port= myPort)
+```
+
+# Przefiltruj dane z bazy wybierając najnowsze ogłoszenia, daty wybierz z tabeli data
+
+```{r}
+
+dbListTables(conM)
+dbListFields(conM,"daty")
+
+```
+```{r}
+
+dbListTables(conM)
+dbListFields(conM,"daty")
+
+query<-"Select max(data) from daty"
+daty <- dbGetQuery(conM,query)
+
+query<-"Select * from daty"
+daty<-dbGetQuery(conM,query)
+str(daty)
+
+tbl(conM,"daty")%>%show_query()
+datyTbl<-tbl(conM,"daty")
+
+```
+```{r}
+
+#select
+datyTbl %>% select(data)
+#arrange
+datyTibble<- datyTbl %>% select(data)%>% arrange( desc(data) ) %>% head(1) %>% collect()
+
+query<-"Select max(data) from daty"
+daty<- dbGetQuery(conM,query)
+print(daty)
+str(daty)
+
+```
+
+
+```{r}
+
+query<-"Select * from daty"
+daty1<- dbGetQuery(conM,query)
+print(daty1)
+
+
+tbl(conM, "daty") %>% show_query()
+datyTbl <-tbl(conM, "daty")
+
+```
+
+
+```{r}
+
+
+datyTibble <- datyTbl %>% select(data)%>%arrange(desc (data)) %>% head(1) %>% collect()
+
+
+```
+
+#2 Przefiltruj dane z bazy wybierając najnowsze ogłoszenia, daty wybierz z tabeli data.
+
+
+```{r}
+query<-"Select max(data) from daty"
+
+dbListTables(conM)
+
+dbListFields(conM,"auta2weeks")
+"2022-04-10"
+datyTibble<- as.data.frame(datyTibble)
+autaTbl<- tbl(conM,"auta2weeks")   %>%filter(data== '!!datyTibble$data' ) %>%collect()
+
+view(autaTbl)
+
+```
+
+#3 Wybierz kolumny: 
+cena,Przebieg,Rok.produkcji,Marka,pojazdu,Model.pojazdu,Wersja,Generacja,Rodzaj.paliwa,Pojemność.skokowa,Moc,Skrzynia.biegów,Napęd,Typ.nadwozia,Liczba.drzwi,Liczba.miejsc,Bezwypadkowy,Uszkodzony,Stan,Kolor
+
+#Oraz ‘napraw’ kolumny:
+Przebieg,Pojemnosc.skokowa,Moc
+
+
+```{r echo=FALSE, out.width='100%'}
+knitr::include_graphics("C:/Users/Dell/Documents/R/volkwagenimage.jpg")
+
+```
+
+#mój wybór to Volkswagen Golf VII 2.0 TSI BMT z . Reprezentuje dość dobre parametry: 128 000 km przebiegu,z automatyczną skrzynią biegów i napędem na 4 koła.Spalanie w mieście to 8l/100 km.
+
+
+
+```{r echo=FALSE}
+auta2<- read.csv("C:/Users/Dell/Documents/R/auta2.csv", encoding="UTF-8")
+
+View(auta2)
+names(auta2)
+
+
+names(auta2)<-c(cena,Przebieg,Rok.produkcji,Marka,pojazdu,Model.pojazdu,Wersja,Generacja,Rodzaj.paliwa,Pojemność.skokowa,Moc,Skrzynia.biegów,Napęd,Typ.nadwozia,Liczba.drzwi,Liczba.miejsc,Bezwypadkowy,Uszkodzony,Stan,Kolor)
+
+auta2<-auta2%>%mutate(Pojemność.skokowa= as.numeric(Pojemność.skokowa%>%str_replace_all("cm3","")%>%str_replace_all(" ","")))
+
+auta2<-auta2%>%mutate(Przebieg= as.numeric(Przebieg%>%str_replace_all("km","")%>%str_replace_all(" ","")))
+
+auta2<-auta2%>%mutate(Moc = as.numeric(Moc%>%str_replace_all("KM","")%>%str_replace_all(" ","")))
+
+auta2<-auta2%>% mutate_if(is.character,as.factor)
+
+```
+
+#4 Wykonaj raport RMarkdown (kod R uwzględniony w raporcie) oraz zaproponuj najlepszy według Ciebie samochód z dostępnych ogłoszeń
+
+#samochód powinien być nieuszkodzony
+#rocznik od 2013
+#budżet klienta to 50000 zł
+#Przedstaw w tabeli: średnie ceny, przebieg, rocznik, liczbę ogłoszeń wybranych modeli
+#Przedstaw w tabeli: mediany cen, przebiegu, rocznika, liczbę ogłoszeń wybranych modeli
+
+#Na wykresach przedstaw dla wybranych modeli:
+#liczbę ogłoszeń
+#liczbę w zależnośći od rocznika,typu napędu,skrzyni biegów,rodzaju paliwa,typu nadwozia
+#cenę w zależności od rocznika,napędu,skrzyni biegów,rodzaju paliwa,typu nadwozia.
+
+#Opisz, krótko który samochód zaproponujesz i dlaczego. Do raportu dołącz zdjęcie poglądowe pojazdu.
+
+
+```{r}
+
+auta2$Uszkodzony%<>%replace_na("Nie")
+
+auta2_1<-auta2%>%filter(cena<=5000 & Rok.produkcji>=2013 & Uszkodzony !='Tak')
+
+
+tabelamean <-auta2_1%>%group_by(Marka.pojazdu, Model.pojazdu)%>%summarise(n=n(), przebieg_mean=mean(Przebieg), przebieg_median=median(Przebieg), cena_mean=mean(cena), cena_median=median(cena), rok_mean=mean(Rok.produkcji), rok_median=median(Rok.produkcji)) %>% arrange(desc(rok_mean), desc(n))
+
+tabelamean%>%ggplot(aes(x= reorder(str_c(Marka.pojazdu," ", Model.pojazdu), -n), y =n))+ geom_col()+coord_flip() + theme(text=element_text(size=9))
+
+
+auta2_2<- auta2_1%>%group_by(Rok.produkcji)%>%summarise( n=n())
+
+auta2_3<- auta2_1%>%group_by(Napęd)%>%summarise( n=n())
+
+auta2_4<- auta2_1%>%group_by(Rodzaj.paliwa)%>%summarise( n=n())
+
+auta2_5<- auta2_1%>%group_by(Skrzynia.biegów)%>%summarise( n=n())
+
+auta2_6<- auta2_1%>%group_by(Typ.nadwozia)%>%summarise( n=n())
+
+auta2_2%>%ggplot(aes(x= Rok.produkcji, y =n))+ geom_col()+ theme(text=element_text(size=9))+scale_x_continuous("Rok.produkcji", labels = as.character(cars_2$Rok.produkcji), breaks=cars_2$Rok.produkcji)
+
+auta2_3%>%ggplot(aes(x= Napęd, y =n))+ geom_col()+ theme(text=element_text(size=9))
+
+auta2_4%>%ggplot(aes(x= Rodzaj.paliwa, y =n))+ geom_col()+ theme(text=element_text(size=9))
+
+auta2_5%>%ggplot(aes(x= Skrzynia.biegów, y =n))+ geom_col()+ theme(text=element_text(size=9))
+
+auta2_6%>%ggplot(aes(x= Typ.nadwozia, y =n))+ geom_col()+ theme(text=element_text(size=9))
+
+auta2_1%>%ggplot(aes(x=Rok.produkcji,y=cena))+
+  geom_point()+scale_x_continuous("Rok.produkcji", labels = as.character(cars_1$Rok.produkcji), breaks=cars_1$Rok.produkcji)
+auta2_1%>%ggplot(aes(x=Napęd,y=cena))+
+  geom_point()+theme(text=element_text(size=9))
+
+auta2_1%>%ggplot(aes(x=Skrzynia.biegów,y=cena))+
+  geom_point()+theme(text=element_text(size=9))
+auta2_1%>%ggplot(aes(x=Typ.nadwozia,y=cena))+
+  geom_point()+theme(text=element_text(size=9))
+auta2_1%>%ggplot(aes(x=Rodzaj.paliwa,y=cena))+
+  geom_point()+scale_y_continuous()+theme(text=element_text(size=9))
+
+auta2_1%>%ggplot(aes(x=cena, y=str_c(Marka.pojazdu," ", Model.pojazdu)))+geom_point()
+
+auta2_1%>%ggplot(aes(x=Rok.produkcji, y=str_c(Marka.pojazdu," ", Model.pojazdu)))+geom_point()+scale_x_continuous("Rok.produkcji", labels = as.character(cars_2$Rok.produkcji), breaks=cars_2$Rok.produkcji)+ theme(text=element_text(size=8))
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
